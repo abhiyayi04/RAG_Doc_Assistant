@@ -1,14 +1,11 @@
-from openai import OpenAI
 from llama_index.readers.file import PDFReader
 from llama_index.core.node_parser import SentenceSplitter
-from dotenv import load_dotenv
+from sentence_transformers import SentenceTransformer
 
-load_dotenv()
+EMBED_MODEL = "all-MiniLM-L6-v2"
+EMBED_DIM = 384
 
-client = OpenAI()
-EMBED_MODEL = "text-embedding-3-large"
-EMBED_DIM = 3072
-
+_model = SentenceTransformer(EMBED_MODEL)
 splitter = SentenceSplitter(chunk_size=1000, chunk_overlap=200)
 
 def load_and_chunk_pdf(path: str):
@@ -21,8 +18,5 @@ def load_and_chunk_pdf(path: str):
 
 
 def embed_texts(texts: list[str]) -> list[list[float]]:
-    response = client.embeddings.create(
-        model=EMBED_MODEL,
-        input=texts,
-    )
-    return [item.embedding for item in response.data]
+    embeddings = _model.encode(texts, convert_to_numpy=True)
+    return embeddings.tolist()
