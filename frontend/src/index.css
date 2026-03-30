@@ -1,3 +1,8 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+html {
+  /* Prevents white flash before React mounts */
+  background-color: #09090b;
+}
