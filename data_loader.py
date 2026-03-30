@@ -1,4 +1,5 @@
 import logging
+from functools import lru_cache
 from pathlib import Path
 from llama_index.readers.file import PDFReader
 from llama_index.core.node_parser import SentenceSplitter
@@ -9,8 +10,12 @@ logger = logging.getLogger("rag.data_loader")
 EMBED_MODEL = "all-MiniLM-L6-v2"
 EMBED_DIM = 384
 
-_model = SentenceTransformer(EMBED_MODEL)
 splitter = SentenceSplitter(chunk_size=1000, chunk_overlap=200)
+
+@lru_cache(maxsize=1)
+def _get_model() -> SentenceTransformer:
+    logger.info("Loading embedding model: %s", EMBED_MODEL)
+    return SentenceTransformer(EMBED_MODEL)
 
 def load_and_chunk_pdf(path: str) -> list[str]:
     logger.info("Loading PDF: %s", path)
@@ -34,5 +39,5 @@ def load_and_chunk_pdf(path: str) -> list[str]:
 
 
 def embed_texts(texts: list[str]) -> list[list[float]]:
-    embeddings = _model.encode(texts, convert_to_numpy=True)
+    embeddings = _get_model().encode(texts, convert_to_numpy=True)
     return embeddings.tolist()

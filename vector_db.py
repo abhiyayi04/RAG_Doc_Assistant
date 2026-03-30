@@ -1,4 +1,5 @@
 import logging
+from functools import lru_cache
 from qdrant_client import QdrantClient
 from qdrant_client.models import VectorParams, Distance, PointStruct
 
@@ -32,12 +33,13 @@ class QdrantStorage:
             logger.error("Upsert failed: %s", exc)
             raise
 
-    def search(self, query_vector, top_k: int = 5):
+    def search(self, query_vector, top_k: int = 5, score_threshold: float = 0.3):
         result_obj = self.client.query_points(
             collection_name=self.collection,
             query=query_vector,
             with_payload=True,
             limit=top_k,
+            score_threshold=score_threshold,
         )
 
         results = result_obj.points
@@ -54,4 +56,12 @@ class QdrantStorage:
                 contexts.append(text)
                 sources.add(source)
 
+        if not contexts:
+            logger.warning("All results filtered by score_threshold=%.2f", score_threshold)
+
         return {"contexts": contexts, "sources": list(sources)}
+
+
+@lru_cache(maxsize=1)
+def get_storage(url: str = "http://localhost:6333", collection: str = "docs", dim: int = 384) -> QdrantStorage:
+    return QdrantStorage(url=url, collection=collection, dim=dim)
