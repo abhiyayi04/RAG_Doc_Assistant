@@ -18,10 +18,15 @@ def get_inngest_client() -> inngest.Inngest:
     return inngest.Inngest(app_id="rag_app", is_production=False)
 
 
+MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "50"))
+
 def save_uploaded_pdf(file) -> Path:
     uploads_dir = Path("uploads")
     uploads_dir.mkdir(parents=True, exist_ok=True)
-    file_path = uploads_dir / file.name
+    safe_name = Path(file.name).name
+    file_path = (uploads_dir / safe_name).resolve()
+    if not str(file_path).startswith(str(uploads_dir.resolve())):
+        raise ValueError(f"Illegal filename: {file.name}")
     file_bytes = file.getbuffer()
     file_path.write_bytes(file_bytes)
     return file_path
@@ -44,6 +49,9 @@ st.title("Upload a PDF to Ingest")
 uploaded = st.file_uploader("Choose a PDF", type=["pdf"], accept_multiple_files=False)
 
 if uploaded is not None:
+    if uploaded.size > MAX_UPLOAD_MB * 1024 * 1024:
+        st.error(f"File exceeds {MAX_UPLOAD_MB} MB limit.")
+        st.stop()
     with st.spinner("Uploading and triggering ingestion..."):
         path = save_uploaded_pdf(uploaded)
         # Kick off the event and block until the send completes

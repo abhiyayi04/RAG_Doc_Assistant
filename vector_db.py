@@ -1,21 +1,36 @@
+import logging
 from qdrant_client import QdrantClient
 from qdrant_client.models import VectorParams, Distance, PointStruct
 
+logger = logging.getLogger("rag.vector_db")
+
 class QdrantStorage:
     def __init__(self, url="http://localhost:6333", collection="docs", dim=384):
-        self.client = QdrantClient(url=url, timeout=30)
-        self.collection = collection
-        if not self.client.collection_exists(self.collection):
-            self.client.create_collection(
-                collection_name=self.collection,
-                vectors_config=VectorParams(size=dim, distance=Distance.COSINE),
+        try:
+            self.client = QdrantClient(url=url, timeout=30)
+            self.collection = collection
+            if not self.client.collection_exists(self.collection):
+                self.client.create_collection(
+                    collection_name=self.collection,
+                    vectors_config=VectorParams(size=dim, distance=Distance.COSINE),
+                )
+                logger.info("Created Qdrant collection: %s", self.collection)
+        except Exception as exc:
+            logger.error("Qdrant connection failed: %s", exc)
+            raise RuntimeError("Could not connect to Qdrant") from exc
+
+    def upsert(self, ids: list, vectors: list, payloads: list) -> None:
+        if not (len(ids) == len(vectors) == len(payloads)):
+            raise ValueError(
+                f"Length mismatch: ids={len(ids)}, vectors={len(vectors)}, payloads={len(payloads)}"
             )
-    
-    
-    def upsert(self, ids, vectors, payloads):
-        points = [PointStruct(id=ids[i], vector=vectors[i], payload=payloads[i]) for i in range(len(ids))]
-        self.client.upsert(self.collection, points=points)
-    
+        try:
+            points = [PointStruct(id=ids[i], vector=vectors[i], payload=payloads[i]) for i in range(len(ids))]
+            self.client.upsert(self.collection, points=points)
+            logger.info("Upserted %d points to collection '%s'", len(ids), self.collection)
+        except Exception as exc:
+            logger.error("Upsert failed: %s", exc)
+            raise
 
     def search(self, query_vector, top_k: int = 5):
         result_obj = self.client.query_points(
