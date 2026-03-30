@@ -56,7 +56,7 @@ class QdrantStorage:
                 sources.add(source)
 
         if not contexts:
-            logger.warning("All results filtered by score_threshold=%.2f", score_threshold)
+            logger.warning("No matching contexts found in Qdrant.")
 
         return {"contexts": contexts, "sources": list(sources)}
 
