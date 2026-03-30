@@ -33,13 +33,12 @@ class QdrantStorage:
             logger.error("Upsert failed: %s", exc)
             raise
 
-    def search(self, query_vector, top_k: int = 5, score_threshold: float = 0.3):
+    def search(self, query_vector, top_k: int = 5):
         result_obj = self.client.query_points(
             collection_name=self.collection,
             query=query_vector,
             with_payload=True,
             limit=top_k,
-            score_threshold=score_threshold,
         )
 
         results = result_obj.points

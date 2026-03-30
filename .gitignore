@@ -15,4 +15,11 @@ wheels/
 # Docker / DB
 qdrant_storage
 
+#uploads
 uploads
+
+# Node
+node_modules/
+frontend/node_modules/
+
+dist/
